@@ -1,0 +1,7 @@
+hacks/artifacts/
+*.pub
+*.key
+*.key.base64
+*.pem
+*.crt
+.DS_Store

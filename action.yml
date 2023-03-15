@@ -1,0 +1,27 @@
+name: "sign-push-acr"
+description: "Sign docker images and push to ACR"
+inputs:
+  image-ref:
+    description: "imagename:tag"
+    required: true
+  signer-key-id:
+    description: "signer key id (hash)"
+    required: true
+  signer-key:
+    description: "signer key content base64 encoded"
+    required: true
+  repository-passphrase:
+    description: "repository passphrase"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - run: echo "${{ inputs.signer-key }}" | base64 -d > ${{ inputs.signer-key-id }}.key
+      shell: bash
+    - run: |
+        ${{github.action_path}}/action.sh \
+          "${{ inputs.image-ref }}" \
+          "${{ inputs.signer-key-id }}" \
+          "${{ inputs.signer-key-id }}.key" \
+          "${{ inputs.repository-passphrase }}"
+      shell: bash
