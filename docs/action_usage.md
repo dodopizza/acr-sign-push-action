@@ -17,7 +17,9 @@ jobs:
   Build/Sign/Release:
     runs-on: ubuntu-latest
     env:
-      image-ref: example.azurecr.io/nginx:latest
+      tags: >
+        example.azurecr.io/nginx:dev,
+        example.azurecr.io/nginx:stage
     steps:
         // Checkout repo
       - uses: actions/checkout@v3
@@ -33,12 +35,12 @@ jobs:
         // Build Dockerfile
       - uses: docker/build-push-action@v4
         with:
-          tags: ${{ env.image-ref }}
+          tags: ${{ env.tags }}
 
         // Sign and Push to registry
       - uses: dodopizza/acr-sign-push-action@main
         with:
-          image-ref: ${{ env.image-ref }}
+          tags: ${{ env.tags }}
           signer-key-id: ${{ secrets.signer_key_id }}
           signer-key: ${{ secrets.signer_key_content_base64 }}
           repository-passphrase: ${{ secrets.repository_passphrase }}

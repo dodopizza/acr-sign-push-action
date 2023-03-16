@@ -5,8 +5,8 @@ branding:
   icon: "award"
   color: "green"
 inputs:
-  image-ref:
-    description: "imagename:tag"
+  tags:
+    description: "image tags separated by comma, example: example.azurecr.io/app:latest"
     required: true
   signer-key-id:
     description: "signer key id (hash)"
@@ -24,7 +24,7 @@ runs:
       shell: bash
     - run: |
         ${{github.action_path}}/action.sh \
-          "${{ inputs.image-ref }}" \
+          "${{ inputs.tags }}" \
           "${{ inputs.signer-key-id }}" \
           "${{ inputs.signer-key-id }}.key" \
           "${{ inputs.repository-passphrase }}"
