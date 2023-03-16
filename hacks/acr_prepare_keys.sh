@@ -12,13 +12,18 @@ NC='\033[0m' # No Color
 
 function usage_info() {
     echo
-    echo -e "Usage: ${BLUE}./$(basename "${0}")${NC} ${GREEN}<registry-passphrase> <repository-passphrase> <signer-name> <acr-name> <repository>${NC}"
+    echo -e "Usage: ${BLUE}./$(basename "${0}")${NC} ${GREEN}<acr-name> <repository> <registry-passphrase> <repository-passphrase> <signer>${NC} [signer-private-key] [signer-public-key]"
     echo
+    echo -e "    ${GREEN}<acr-name>${NC} - name of ACR repository, example: ${YELLOW}examplereg${NC}"
+    echo -e "    ${GREEN}<repository>${NC} - name of repository, example: ${YELLOW}nginx${NC}"
     echo -e "    ${GREEN}<registry-passphrase>${NC} - passphrase for registry (root) key"
     echo -e "    ${GREEN}<repository-passphrase>${NC} - passphrase for repository key"
-    echo -e "    ${GREEN}<signer-name>${NC} - name of signer, example: ${YELLOW}site${NC}"
-    echo -e "    ${GREEN}<acr-name>${NC} - name of ACR repository, example: ${YELLOW}dodoreg${NC}"
-    echo -e "    ${GREEN}<repository>${NC} - name of repository, example: ${YELLOW}site-gateway${NC}"
+    echo -e "    ${GREEN}<signer>${NC} - name of signer, example: ${YELLOW}example_user${NC}"
+    echo
+    echo -e "    Optional:"
+    echo
+    echo -e "    ${BLUE}[signer-private-key]${NC} - path to existed signer private key file"
+    echo -e "    ${BLUE}[signer-public-key]${NC} - path to existed signer public key file"
     echo
     exit 1
 }
@@ -38,14 +43,18 @@ done
 trap 'log::red [!] Error on line ${LINENO}' ERR
 trap 'log [.]' EXIT
 
-export DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE="${1}"
-export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE="${2}"
-export DOCKER_CONTENT_TRUST=1
-
-signer="${3}"
-acr_name="${4}"
-repository="${5}"
+acr_name="${1}"
+repository="${2}"
 repository_full="${acr_name}.azurecr.io/${repository}"
+registry_passphrase="${3}"
+repository_passphrase="${4}"
+signer="${5}"
+signer_private_key="${6:-}"
+signer_public_key="${7:-}"
+
+export DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE="${registry_passphrase}"
+export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE="${repository_passphrase}"
+export DOCKER_CONTENT_TRUST=1
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 docker_trust_dir="${HOME}/.docker/trust"
@@ -57,12 +66,20 @@ az acr login --name "${acr_name}"
 log "[~] Create artifacts dir"
 mkdir -p "${artifacts_dir}"
 
-log "[~] Create signer personal key pair to identify who is pushed"
-docker trust key generate "${signer}" --dir "${artifacts_dir}/"
-signer_pub_key="${artifacts_dir}/${signer}.pub"
+if [ -n "${signer_private_key}" ] && [ -n "${signer_public_key}" ]; then
+    log "[i] Signer private and public keys are provided. Skip key generation. Copy signer private key to docker trust dir"
+    cp -f "${signer_private_key}" "${docker_trust_dir}/private/"
+
+    log "[c] Copy signer public key to artifacts dir"
+    cp -f "${signer_public_key}" "${artifacts_dir}/"
+else
+    log "[~] Signer private and public keys are NOT provided. Create signer personal key pair"
+    docker trust key generate "${signer}" --dir "${artifacts_dir}/"
+    signer_public_key="${artifacts_dir}/${signer}.pub"
+fi
 
 log "[~] Bind signer to specific repo"
-docker trust signer add --key "${signer_pub_key}" "${signer}" "${repository_full}"
+docker trust signer add --key "${signer_public_key}" "${signer}" "${repository_full}"
 
 log "[~] Create test image based on alpine"
 alpine_image="alpine:latest"
