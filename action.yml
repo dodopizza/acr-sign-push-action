@@ -1,5 +1,9 @@
-name: "sign-push-acr"
-description: "Sign docker images and push to ACR"
+name: "acr-sign-push"
+author: vitalyu
+description: "Sign docker images and push to Azure container registry"
+branding:
+  icon: "award"
+  color: "green"
 inputs:
   image-ref:
     description: "imagename:tag"
